@@ -27,6 +27,80 @@ TYPE_MAP = {
     "PLACE": "Place",
     "CHEM": "Chemin",
 }
+SPECIAL_NAMES = {
+
+    # Existing
+    "ESPLANADE DE L'": "de l'Esplanade",
+    "LORIMIER DE": "De Lorimier",
+    "CASTELNAU DE": "De Castelnau",
+    "FONTAINE LA": "La Fontaine",
+    "IBERVILLE D'": "D'Iberville",
+    "ARLES D'": "D'Arles",
+    "GALETS DES": "Des Galets",
+    "LAMARTINE DE": "De Lamartine",
+    "LIEGE DE": "De Liège",
+
+    # Saint...
+    "ST-HUBERT": "Saint-Hubert",
+    "ST-DENIS": "Saint-Denis",
+    "ST-LAURENT": "Saint-Laurent",
+    "ST-MICHEL": "Saint-Michel",
+    "ST-MARC": "Saint-Marc",
+    "ST-PATRICK": "Saint-Patrick",
+
+    # Sainte...
+    "STE-CATHERINE": "Sainte-Catherine",
+    "STE-CLAIRE": "Sainte-Claire",
+
+    # De...
+    "ACADIE DE L'": "de l'Acadie",
+    "BELLECHASSE DE": "De Bellechasse",
+    "BRETAGNE DE": "De Bretagne",
+    "CADILLAC DE": "De Cadillac",
+    "CASTILLE DE": "De Castille",
+    "CHATEAUBRIAND DE": "De Chateaubriand",
+    "COMPIEGNE DE": "De Compiègne",
+    "COTE-DE-LIESSE DE LA": "de la Côte-de-Liesse",
+    "COTE-ST-LUC DE LA": "de la Côte-Saint-Luc",
+    "COTE-STE-CATHERINE DE LA": "de la Côte-Sainte-Catherine",
+    "DORCHESTER": "Dorchester",
+    "ECORES DES": "Des Écores",
+    "HONORE-BEAUGRAND": "Honoré-Beaugrand",
+    "INSPECTEUR DE L'": "de l'Inspecteur",
+    "LACHENAIE DE": "De Lachenaie",
+    "MAISONNEUVE DE": "De Maisonneuve",
+    "MARSEILLE DE": "De Marseille",
+    "MONTAGNE DE LA": "de la Montagne",
+    "NOTRE-DAME": "Notre-Dame",
+    "ORMEAUX DES": "Des Ormeaux",
+    "PAIMPOL DE": "De Paimpol",
+    "PIERRE-DE-COUBERTIN": "Pierre-De-Coubertin",
+    "RECOLLETS DES": "Des Récollets",
+    "REIMS DE": "De Reims",
+    "RENTY DE": "De Renty",
+    "ROSAIRE DU": "Du Rosaire",
+    "ROSEMONT": "Rosemont",
+    "ROUEN DE": "De Rouen",
+    "SALABERRY DE": "De Salaberry",
+    "SHANNON DU": "Du Shannon",
+    "THOMAS-KEEFER": "Thomas-Keefer",
+    "TOULOUSE DE": "De Toulouse",
+    "VIGER": "Viger",
+    "VITERBE DE": "De Viterbe",
+    "ST-REAL DE": "De Saint-Real",
+    "ARTAGNAN D'": "D'Artagnan",
+    "CENTRE DU": "Centre",
+
+    "MACQUEEN PLAC": "Place Macqueen",
+
+    # Hyphenated names
+    "CHRISTOPHE-COLOMB": "Christophe-Colomb",
+    "JEAN-TALON": "Jean-Talon",
+    "LOUIS-H-LA-FONTAINE": "Louis-H.-La Fontaine",
+    "MADELEINE-HUGUENIN": "Madeleine-Huguenin",
+    "PIE-IX": "Pie-IX",
+    "RENE-LEVESQUE": "René-Lévesque",
+}
 
 DIRECTION_MAP = {
     " E ": " Est ",
@@ -35,51 +109,51 @@ DIRECTION_MAP = {
     " S ": " Sud ",
 }
 
-
 def normalize_street(s):
 
     if pd.isna(s):
         return ""
 
-    s = s.strip().upper()
+    s = str(s).strip().upper()
 
-    # Replace directions
+    # Replace direction abbreviations before splitting
     for k, v in DIRECTION_MAP.items():
         s = s.replace(k, v.upper())
 
     tokens = s.split()
 
-    if len(tokens) == 0:
+    if not tokens:
         return ""
 
     street_type = ""
 
+    # Street type is the last token
     if tokens[-1] in TYPE_MAP:
         street_type = TYPE_MAP[tokens[-1]]
         tokens = tokens[:-1]
 
     name = " ".join(tokens)
 
-    # Est/Ouest at end
-    name = name.replace(" EST", " Est")
-    name = name.replace(" OUEST", " Ouest")
-    name = name.replace(" NORD", " Nord")
-    name = name.replace(" SUD", " Sud")
+    # Move direction from the middle to the end if needed
+    # e.g. CASTELNAU DE EST -> CASTELNAU DE + Est
+    direction = ""
 
-    # Fix capitalization
-    name = name.title()
+    for d in (" EST", " OUEST", " NORD", " SUD"):
+        if name.endswith(d):
+            direction = d.title().strip()
+            name = name[:-len(d)].strip()
+            break
 
-    # Common apostrophes
-    name = name.replace(" D'", " d'")
-    name = name.replace(" L'", " l'")
-    name = name.replace(" De ", " de ")
-    name = name.replace(" Des ", " des ")
-    name = name.replace(" Du ", " du ")
-    name = name.replace(" La ", " la ")
-    name = name.replace(" Le ", " le ")
+    # Use exact exception if available
+    if name in SPECIAL_NAMES:
+        name = SPECIAL_NAMES[name]
+    else:
+        name = name.title()
+
+    if direction:
+        name += f" {direction}"
 
     return f"{street_type} {name}".strip()
-
 
 # =====================================================
 # Build Google query
